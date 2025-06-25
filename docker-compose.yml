@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  pivot-app:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./outputs:/app/outputs   # mount thư mục để lưu file xuất ra bên ngoài
+      - ./uploads:/app/uploads
+    environment:
+      - FLASK_ENV=development  # hoặc production nếu bạn đã hoàn thiện

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Order_Remaining_Payment_Review_Checklist</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .custom-card {
+            width: 100%;
+            max-width: 95%;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .table-responsive {
+            overflow-x: auto;
+        }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1055;
+        }
+        #copyBanner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #007d00;
+            color: white;
+            padding: 10px 20px;
+            display: none;
+            z-index: 2000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            animation: slideDown 0.4s ease-out;
+        }
+        #copyBanner.show {
+            display: block;
+        }
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid px-4">
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <div class="card shadow-sm custom-card">
+                <div class="card-body">
+                    <h2 class="card-title text-center mb-4">📊 Order Remaining Payment Review Checklist</h2>
+
+                    <form method="POST" enctype="multipart/form-data" class="mb-4">
+                        <div class="input-group">
+                            <input type="file" name="csv_file" accept=".csv" class="form-control" required>
+                            <button type="submit" class="btn btn-primary">Generate</button>
+                        </div>
+                    </form>
+
+                    {% if files and files[-1].output %}
+                        <div class="mb-3">
+                            <strong>📥 Download:</strong>
+                            <a href="{{ url_for('download_file', filename=files[-1].output) }}" class="btn btn-success btn-sm">
+                                Order_Remaining_Payment_Review_Checklist.xlsx
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    {% if filtered_rows %}
+                        <h5>📌 Rows with <code>number_of_days = 0 or 1</code></h5>
+                        <div class="mb-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="copyTable()">📋 Copy Table</button>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="dataTable" class="table table-bordered table-hover table-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        {% for key in column_order %}
+                                            <th>{{ key }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in filtered_rows %}
+                                        <tr>
+                                            {% for key in column_order %}
+                                                <td>{{ row.get(key, '') }}</td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Copy Banner -->
+<div id="copyBanner">
+    <div class="d-flex align-items-center">
+        <div class="text-white flex-grow-1">
+            <strong>✅ Copied to clipboard</strong>
+            <span class="d-block small">Just paste to Confluence 😀</span>
+        </div>
+        <button class="btn btn-light btn-sm ms-3" onclick="hideCopyBanner()">Close</button>
+    </div>
+</div>
+
+<!-- Toast Messages -->
+<div class="toast-container">
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+        {% for message in messages %}
+        <div class="toast align-items-center {{ 'text-bg-danger' if '❌' in message else 'text-bg-success' }} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    {{ message }}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    window.addEventListener('DOMContentLoaded', () => {
+        const toastElements = document.querySelectorAll('.toast');
+        toastElements.forEach(toastEl => {
+            const toast = new bootstrap.Toast(toastEl, { delay: 4000 });
+            toast.show();
+        });
+    });
+
+    function copyTable() {
+        const table = document.getElementById("dataTable");
+        if (!table) return;
+
+        let text = "";
+        table.querySelectorAll("tr").forEach(row => {
+            const rowText = Array.from(row.querySelectorAll("th, td"))
+                                  .map(col => col.innerText.trim())
+                                  .join("\t");
+            text += rowText + "\n";
+        });
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(() => {
+                showCopyBanner();
+            }).catch(() => {
+                fallbackCopy(text);
+                showCopyBanner();
+            });
+        } else {
+            fallbackCopy(text);
+            showCopyBanner();
+        }
+    }
+
+    function fallbackCopy(text) {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        try {
+            document.execCommand('copy');
+        } catch (err) {
+            alert("❌ Cannot copy: " + err);
+        }
+        document.body.removeChild(textarea);
+    }
+
+    function showCopyBanner() {
+        const banner = document.getElementById("copyBanner");
+        banner.classList.add("show");
+        setTimeout(hideCopyBanner, 4000);
+    }
+
+    function hideCopyBanner() {
+        const banner = document.getElementById("copyBanner");
+        banner.classList.remove("show");
+    }
+</script>
+</body>
+</html>
