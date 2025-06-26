@@ -73,7 +73,7 @@
 
                     {% if files and files[-1].output %}
                         <div class="mb-3">
-                            <strong>📥 Download:</strong>
+                            <strong>👅 Download:</strong>
                             <a href="{{ url_for('download_file', filename=files[-1].output) }}" class="btn btn-success btn-sm">
                                 Order_Remaining_Payment_Review_Checklist.xlsx
                             </a>
@@ -113,7 +113,6 @@
     </div>
 </div>
 
-<!-- Copy Banner -->
 <div id="copyBanner">
     <div class="d-flex align-items-center">
         <div class="text-white flex-grow-1">
@@ -124,7 +123,6 @@
     </div>
 </div>
 
-<!-- Toast Messages -->
 <div class="toast-container">
     {% with messages = get_flashed_messages() %}
     {% if messages %}
@@ -156,41 +154,55 @@
         const table = document.getElementById("dataTable");
         if (!table) return;
 
-        let text = "";
+        let html = '<table border="1" cellspacing="0" cellpadding="4"><tbody>';
+
         table.querySelectorAll("tr").forEach(row => {
-            const rowText = Array.from(row.querySelectorAll("th, td"))
-                                  .map(col => col.innerText.trim())
-                                  .join("\t");
-            text += rowText + "\n";
+            html += '<tr>';
+            row.querySelectorAll("th, td").forEach(cell => {
+                const tag = cell.tagName.toLowerCase();
+                html += `<${tag}>${cell.innerText.trim()}</${tag}>`;
+            });
+            html += '</tr>';
         });
 
+        html += '</tbody></table>';
+
         if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(text).then(() => {
+            const blob = new Blob([html], { type: 'text/html' });
+            const data = [new ClipboardItem({ 'text/html': blob })];
+            navigator.clipboard.write(data).then(() => {
                 showCopyBanner();
-            }).catch(() => {
-                fallbackCopy(text);
+            }).catch(err => {
+                console.error('Copy failed:', err);
+                fallbackCopyHtml(html);
                 showCopyBanner();
             });
         } else {
-            fallbackCopy(text);
+            fallbackCopyHtml(html);
             showCopyBanner();
         }
     }
 
-    function fallbackCopy(text) {
-        const textarea = document.createElement("textarea");
-        textarea.value = text;
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
+    function fallbackCopyHtml(html) {
+        const container = document.createElement("div");
+        container.innerHTML = html;
+        container.style.position = "fixed";
+        container.style.left = "-9999px";
+        document.body.appendChild(container);
+
+        const range = document.createRange();
+        range.selectNode(container);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+
         try {
             document.execCommand('copy');
         } catch (err) {
-            alert("❌ Cannot copy: " + err);
+            alert("\u274c Cannot copy: " + err);
         }
-        document.body.removeChild(textarea);
+
+        window.getSelection().removeAllRanges();
+        document.body.removeChild(container);
     }
 
     function showCopyBanner() {
